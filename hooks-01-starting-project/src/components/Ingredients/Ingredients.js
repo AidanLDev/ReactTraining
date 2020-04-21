@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
@@ -8,24 +8,42 @@ const Ingredients = () => {
   const [ingredients, setIngredients] = useState([]);
 
   const handleAddIngredient = (ingredient) => {
-    setIngredients((prevState) => [
-      ...prevState,
-      { id: Math.random().toString(), ...ingredient },
-    ]);
+    fetch('https://aidan-react-hooks.firebaseio.com/ingredients.json', {
+      method: 'POST',
+      body: JSON.stringify(ingredient),
+      headers: { 'Content-Type': 'application/json' },
+    }).then(async (response) => {
+      const responseData = await response.json();
+      setIngredients((prevState) => [
+        ...prevState,
+        { id: responseData.name, ...ingredient },
+      ]);
+    });
   };
 
   const handleRemoveIngredient = (ingredientId) => {
-    setIngredients((prevState) =>
-      prevState.filter((ing) => ing.id !== ingredientId)
-    );
+    fetch(
+      `https://aidan-react-hooks.firebaseio.com/ingredients/${ingredientId}.json`,
+      {
+        method: 'DELETE',
+      }
+    ).then((res) => {
+      setIngredients((prevState) =>
+        prevState.filter((ing) => ing.id !== ingredientId)
+      );
+    });
   };
+
+  const handleFilterIngredients = useCallback((filteredIngredients) => {
+    setIngredients(filteredIngredients);
+  }, []);
 
   return (
     <div className='App'>
       <IngredientForm onAddIngredient={handleAddIngredient} />
 
       <section>
-        <Search />
+        <Search handleFilterIngredients={handleFilterIngredients} />
         <IngredientList
           ingredients={ingredients}
           onRemoveItem={handleRemoveIngredient}
