@@ -1,10 +1,11 @@
-import React, { useReducer, useState, useCallback } from 'react';
+import React, { useReducer, useCallback } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import Search from './Search';
 import ErrorModal from '../UI/ErrorModal';
 
+// Using a reducer is clear because all the state logic is in one place
 const ingredientReducer = (currentIngredients, action) => {
   switch (action.type) {
     case 'SET':
@@ -18,34 +19,53 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 };
 
+const httpReducer = (curHttpState, action) => {
+  switch (action.type) {
+    case 'SEND':
+      return { ...curHttpState, loading: true };
+    case 'RESPONSE':
+      return { ...curHttpState, loading: false };
+    case 'ERROR':
+      return { error: action.errorMessage, loading: false };
+    case 'CLEAR':
+      return { ...curHttpState, error: null };
+    default:
+      throw new Error('No http case');
+  }
+};
+
 const Ingredients = () => {
-  const [ingredients, dispatch] = useReducer(ingredientReducer, []); //  Initial value of ingredients is an empty array
-  // const [ingredients, setIngredients] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState();
+  const [ingredients, dispatchIng] = useReducer(ingredientReducer, []); //  Initial value of ingredients is an empty array
+  const [httpState, dispatchHttp] = useReducer(httpReducer, {
+    loading: false,
+    error: null,
+  });
 
   const handleAddIngredient = (ingredient) => {
-    setLoading(true);
+    dispatchHttp({ type: 'SEND' });
     fetch('https://aidan-react-hooks.firebaseio.com/ingredients.json', {
       method: 'POST',
       body: JSON.stringify(ingredient),
       headers: { 'Content-Type': 'application/json' },
-    }).then(async (response) => {
-      setLoading(false);
-      const responseData = await response.json();
-      // setIngredients((prevState) => [
-      //   ...prevState,
-      //   { id: responseData.name, ...ingredient },
-      // ]);
-      dispatch({
-        type: 'ADD',
-        ingredients: { id: responseData.name, ...ingredient },
+    })
+      .then(async (response) => {
+        dispatchHttp({ type: 'RESPONSE' });
+        const responseData = await response.json();
+        dispatchIng({
+          type: 'ADD',
+          ingredients: { id: responseData.name, ...ingredient },
+        });
+      })
+      .catch((err) => {
+        dispatchHttp({
+          type: 'ERROR',
+          errorMessage: `Ooops -  ${err.message}`,
+        });
       });
-    });
   };
 
   const handleRemoveIngredient = (ingredientId) => {
-    setLoading(true);
+    dispatchHttp({ type: 'SEND' });
     fetch(
       `https://aidan-react-hooks.firebaseio.com/ingredients/${ingredientId}.json`,
       {
@@ -53,31 +73,34 @@ const Ingredients = () => {
       }
     )
       .then((res) => {
-        setLoading(false);
-        // setIngredients((prevState) =>
-        //   prevState.filter((ing) => ing.id !== ingredientId)
-        // );
-        dispatch({ type: 'DELETE', id: ingredientId });
+        dispatchHttp({ type: 'RESPONSE' });
+        dispatchIng({ type: 'DELETE', id: ingredientId });
       })
       .catch((error) => {
-        setLoading(false);
-        setError(`Ooops - ${error.message}`);
+        dispatchHttp({
+          type: 'ERROR',
+          errorMessage: `Ooops - ${error.message}`,
+        });
       });
   };
 
   const handleFilterIngredients = useCallback((filteredIngredients) => {
-    // setIngredients(filteredIngredients);
-    dispatch({ type: 'SET', ingredients: filteredIngredients });
+    dispatchIng({ type: 'SET', ingredients: filteredIngredients });
   }, []);
 
   const clearError = () => {
-    setError(null);
+    dispatchHttp({ type: 'CLEAR' });
   };
 
   return (
     <div className='App'>
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
-      <IngredientForm onAddIngredient={handleAddIngredient} loading={loading} />
+      {httpState.error && (
+        <ErrorModal onClose={clearError}>{httpState.error}</ErrorModal>
+      )}
+      <IngredientForm
+        onAddIngredient={handleAddIngredient}
+        loading={httpState.loading}
+      />
 
       <section>
         <Search handleFilterIngredients={handleFilterIngredients} />
