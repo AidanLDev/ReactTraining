@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 import './IngredientList.css';
 
-const IngredientList = (props) => {
+const IngredientList = memo((props) => {
+  console.log('List re-render');
   return (
     <section className='ingredient-list'>
       <h2>Loaded Ingredients</h2>
@@ -16,6 +17,6 @@ const IngredientList = (props) => {
       </ul>
     </section>
   );
-};
+});
 
 export default IngredientList;
