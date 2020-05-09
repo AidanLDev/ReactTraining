@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback, useMemo } from 'react';
+import React, { useReducer, useCallback, useMemo, useEffect } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
@@ -22,38 +22,48 @@ const ingredientReducer = (currentIngredients, action) => {
 
 const Ingredients = () => {
   const [ingredients, dispatchIng] = useReducer(ingredientReducer, []); //  Initial value of ingredients is an empty array
-  const { loading, error, data, sendReq } = useHttp();
+  const {
+    loading,
+    error,
+    data,
+    sendReq,
+    reqExtra,
+    identifier,
+    clear,
+  } = useHttp();
 
-  const handleAddIngredient = useCallback((ingredient) => {
-    // dispatchHttp({ type: 'SEND' });
-    // fetch('https://aidan-react-hooks.firebaseio.com/ingredients.json', {
-    //   method: 'POST',
-    //   body: JSON.stringify(ingredient),
-    //   headers: { 'Content-Type': 'application/json' },
-    // })
-    //   .then(async (response) => {
-    //     dispatchHttp({ type: 'RESPONSE' });
-    //     const responseData = await response.json();
-    //     dispatchIng({
-    //       type: 'ADD',
-    //       ingredients: { id: responseData.name, ...ingredient },
-    //     });
-    //   })
-    //   .catch((err) => {
-    //     dispatchHttp({
-    //       type: 'ERROR',
-    //       errorMessage: `Ooops -  ${err.message}`,
-    //     });
-    //   });
-  }, []);
+  useEffect(() => {
+    if (!loading && identifier === 'REMOVE_INGREDIENT') {
+      dispatchIng({ type: 'DELETE', id: reqExtra });
+    } else if (!loading && !error && identifier === 'ADD_INGREDIENT') {
+      dispatchIng({
+        type: 'ADD',
+        ingredients: { id: data.name, ...reqExtra },
+      });
+    }
+  }, [data, reqExtra, identifier, loading, error]);
+
+  const handleAddIngredient = useCallback(
+    (ingredient) => {
+      sendReq(
+        'https://aidan-react-hooks.firebaseio.com/ingredients.json',
+        'POST',
+        JSON.stringify(ingredient),
+        ingredient,
+        'ADD_INGREDIENT'
+      );
+    },
+    [sendReq]
+  );
 
   const handleRemoveIngredient = useCallback(
     (ingredientId) => {
-      // dispatchHttp({ type: 'SEND' });
-      // `https://aidan-react-hooks.firebaseio.com/ingredients/${ingredientId}.json`,
       sendReq(
         `https://aidan-react-hooks.firebaseio.com/ingredients/${ingredientId}.json`,
-        'DELETE'
+        'DELETE',
+        null,
+        ingredientId,
+        'REMOVE_INGREDIENT'
       );
     },
     [sendReq]
@@ -61,10 +71,6 @@ const Ingredients = () => {
 
   const handleFilterIngredients = useCallback((filteredIngredients) => {
     dispatchIng({ type: 'SET', ingredients: filteredIngredients });
-  }, []);
-
-  const clearError = useCallback(() => {
-    // dispatchHttp({ type: 'CLEAR' });
   }, []);
 
   const ingredientList = useMemo(() => {
@@ -78,7 +84,7 @@ const Ingredients = () => {
 
   return (
     <div className='App'>
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+      {error && <ErrorModal onClose={clear}>{error}</ErrorModal>}
       <IngredientForm onAddIngredient={handleAddIngredient} loading={loading} />
       {ingredientList}
       <section>
