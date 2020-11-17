@@ -1,18 +1,17 @@
-import React, { useContext } from 'react';
+import React from 'react';
 
-import { AuthContext } from '../context/auth-context';
 import Card from './UI/Card';
 import './Auth.css';
 
-const Auth = (props) => {
-  const authContext = useContext(AuthContext);
+const Auth = props => {
+  const loginHandler = () => {};
 
   return (
-    <div className='auth'>
+    <div className="auth">
       <Card>
         <h2>You are not authenticated!</h2>
         <p>Please log in to continue.</p>
-        <button onClick={authContext.login}>Log In</button>
+        <button onClick={loginHandler}>Log In</button>
       </Card>
     </div>
   );
